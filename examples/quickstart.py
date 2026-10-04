@@ -5,14 +5,15 @@ from encarapi import EnCarAPI
 
 client = EnCarAPI(os.environ["ENCARAPI_KEY"])  # required
 
-# Newest listings (count=True returns the total available)
-catalog = client.catalog(count=True)
-print("catalog keys:", list(catalog)[:5] if hasattr(catalog, "__iter__") else catalog)
+# Korean catalog (Encar by default), English values, with total count
+kr = client.korea.catalog(manufacturer="Hyundai", lang="en", limit=5, count=True)
+print("Korea:", kr.get("Count"), "matches")
 
-# Filter facets
-facets = client.nav()
-print("facets:", str(facets)[:200])
+# All three Korean marketplaces, deduplicated (plan-dependent, see encarapi.com/#pricing)
+# everything = client.korea.catalog(source="all", limit=5, count=True)
 
-# One vehicle's full detail
-# detail = client.vehicle("12345678")
-# print(detail)
+# Full detail for one vehicle (Encar id, "kbc:<id>" or "kcar:<id>")
+# car = client.korea.vehicle("12345678")
+
+# Chinese listings (ChinaCarAPI key or EnCarAPI key with the China add-on)
+# cn = client.china.catalog(make="BYD", limit=5)

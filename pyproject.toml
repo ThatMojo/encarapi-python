@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "encarapi"
-version = "0.1.0"
-description = "Official Python client for the EnCarAPI — Korean car data API (Encar.com listings, specs, prices)."
+version = "1.0.0"
+description = "Official Python client for EnCarAPI: Korean used car data (Encar, KB Chachacha, K Car) and Chinese used car data (Dongchedi, Che168) in one REST API."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
@@ -14,15 +14,22 @@ keywords = [
     "encar",
     "encar api",
     "encar.com",
+    "kbchacha",
+    "kb chachacha",
+    "kcar",
+    "k car",
     "korean car api",
     "korea car api",
     "korean used car data",
-    "korean car data",
-    "car export korea",
+    "china car api",
+    "chinese used car data",
+    "che168",
+    "dongchedi",
+    "car export",
     "vehicle data api",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -34,6 +41,7 @@ dependencies = ["requests>=2.20"]
 Homepage = "https://encarapi.com"
 Documentation = "https://encarapi.com/documentation"
 Source = "https://github.com/ThatMojo/encarapi-python"
+"China data" = "https://chinacarapi.com"
 
 [tool.hatch.build.targets.wheel]
 packages = ["encarapi"]
