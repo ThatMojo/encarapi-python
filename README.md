@@ -18,7 +18,7 @@ scraping, proxies or geo-blocks.
 ## Install
 
 ```bash
-pip install git+https://github.com/ThatMojo/encarapi-python
+pip install encarapi
 ```
 
 Requires Python 3.8+ and `requests`.
