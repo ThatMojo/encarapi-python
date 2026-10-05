@@ -64,6 +64,16 @@ for change in client.korea.iterate_changes(cursor=saved_cursor or 0):   # 2) del
 save_cursor(client.korea.last_cursor)
 ```
 
+The China API works the same way (`client.china`); its events are
+`{"id", "source", "vehicleId", "type": "new" | "price" | "removed" | "relisted", "oldPrice", "newPrice", "at"}`:
+
+```python
+for change in client.china.iterate_changes(cursor=saved_cursor or 0):
+    # change["type"]: "new" | "price" | "removed" | "relisted"
+    ...
+save_cursor(client.china.last_cursor)
+```
+
 ## Korea API (`client.korea`)
 
 | Method | Endpoint | Notes |
@@ -90,10 +100,11 @@ save_cursor(client.korea.last_cursor)
 | Method | Endpoint | Notes |
 |---|---|---|
 | `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `export_ready`, `sort`, ... |
+| `iterate_catalog(**params)` | `GET /api/catalog` | Generator over all pages (up to the 10,000-result depth limit) |
 | `vehicle(id)` | `GET /api/vehicle/{id}` | Price history, photos, seller, export status |
 | `inspection(id)` | `GET /api/inspection/{id}` | Accident, flood and fire checks, EV battery data |
 | `bulk_vehicles(ids)` | `POST /api/vehicle/bulk` | Up to 500 ids |
-| `changes(**params)` | `GET /api/catalog/changes` | Change feed |
+| `changes(**params)` / `iterate_changes(**params)` | `GET /api/catalog/changes` | Change feed (Business/Scale) |
 | `export_csv()` | `GET /api/catalog/export` | Full catalog CSV |
 | `enums()` / `models(make)` | `GET /api/enums`, `/api/models` | Filter values, models per make |
 

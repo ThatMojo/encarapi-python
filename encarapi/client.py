@@ -23,6 +23,8 @@ CHINA_BASE_URL = "https://api.chinacarapi.com"
 DEFAULT_BASE_URL = KOREA_BASE_URL  # 0.x compatibility
 SIGNUP_URL = "https://encarapi.com"
 CHINA_SIGNUP_URL = "https://chinacarapi.com"
+# /api/catalog on the China API serves at most this many results per query (page * limit).
+CHINA_CATALOG_DEPTH = 10000
 
 
 class EnCarAPIError(Exception):
@@ -228,11 +230,26 @@ class ChinaClient:
 
     def __init__(self, api_key: str, *, base_url: str = CHINA_BASE_URL, timeout: float = 30.0) -> None:
         self._http = _Http(api_key, base_url, CHINA_SIGNUP_URL, "ChinaCarAPI", timeout)
+        self.last_cursor: Optional[int] = None
 
     def catalog(self, **params: Any) -> Any:
         """Search listings. Filters: source, make, model, year_min/max, price_min/max (CNY),
         mileage_max, city, fuel, has_report, export_ready, sort, page, limit, lang ('zh' = original)."""
         return self._http.request("GET", "/api/catalog", params)
+
+    def iterate_catalog(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Yields every listing across all pages: ``for car in china.iterate_catalog(make="BYD"): ...``
+        Stops at the API's 10,000-result depth limit; for the whole catalog use
+        ``export_csv()`` plus ``iterate_changes()``."""
+        limit = min(params.pop("limit", 100), 100)
+        page = params.pop("page", 1)
+        while True:
+            res = self.catalog(**params, limit=limit, page=page)
+            items = res.get("results") or []
+            yield from items
+            if len(items) < limit or (page + 1) * limit > CHINA_CATALOG_DEPTH:
+                return
+            page += 1
 
     def vehicle(self, vehicle_id: str, **params: Any) -> Any:
         """Full record: price history, photos, seller, export status, alsoListedOn."""
@@ -252,6 +269,21 @@ class ChinaClient:
     def changes(self, **params: Any) -> Any:
         """Change feed: ``since`` once, then ``cursor=nextCursor`` (Business/Scale)."""
         return self._http.request("GET", "/api/catalog/changes", params)
+
+    def iterate_changes(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Follows the change feed until drained and yields each event once as
+        ``{"id", "source", "vehicleId", "type": "new" | "price" | "removed" | "relisted", "oldPrice", "newPrice", "at"}``.
+        Afterwards ``china.last_cursor`` is the cursor to resume from."""
+        query = dict(params)
+        while True:
+            res = self.changes(**query)
+            yield from res.get("changes") or []
+            if res.get("nextCursor") is not None:
+                self.last_cursor = res["nextCursor"]
+            if not res.get("hasMore") or res.get("nextCursor") is None:
+                return
+            query = {k: v for k, v in params.items() if k != "since"}
+            query["cursor"] = res["nextCursor"]
 
     def export_csv(self, **params: Any) -> str:
         """Full catalog as CSV text (Business/Scale)."""

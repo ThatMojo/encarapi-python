@@ -97,6 +97,35 @@ class OfflineTests(unittest.TestCase):
         patch_session(client.korea._http, [(200, {"SearchResults": [{"Id": "1"}]})])
         self.assertEqual(len(list(client.korea.iterate_catalog(limit=5))), 1)
 
+    def test_china_iterate_catalog(self):
+        client = EnCarAPI("kr_key", china_key="cn_key")
+        fake = patch_session(client.china._http, [
+            (200, {"results": [{"id": "1"}, {"id": "2"}]}),
+            (200, {"results": [{"id": "3"}]}),
+        ])
+        ids = [c["id"] for c in client.china.iterate_catalog(make="BYD", limit=2)]
+        self.assertEqual(ids, ["1", "2", "3"])
+        self.assertEqual(fake.calls[1]["params"], {"make": "BYD", "limit": 2, "page": 2})
+
+    def test_china_iterate_catalog_depth_limit(self):
+        client = ChinaCarAPI("cn_key")
+        full_page = (200, {"results": [{"id": str(i)} for i in range(100)]})
+        fake = patch_session(client._http, [full_page] * 5)
+        self.assertEqual(len(list(client.iterate_catalog(page=99))), 200)
+        self.assertEqual([c["params"]["page"] for c in fake.calls], [99, 100])
+
+    def test_china_iterate_changes(self):
+        client = EnCarAPI("kr_key", china_key="cn_key")
+        fake = patch_session(client.china._http, [
+            (200, {"cursor": 0, "nextCursor": 7, "hasMore": True, "changes": [{"id": 5, "vehicleId": "a", "type": "new"}, {"id": 7, "vehicleId": "b", "type": "price"}]}),
+            (200, {"cursor": 7, "nextCursor": 9, "hasMore": False, "changes": [{"id": 9, "vehicleId": "c", "type": "removed"}]}),
+        ])
+        events = list(client.china.iterate_changes(since="2026-10-01T00:00:00Z", source="che168"))
+        self.assertEqual([f'{e["type"]}:{e["vehicleId"]}' for e in events], ["new:a", "price:b", "removed:c"])
+        self.assertEqual(fake.calls[0]["url"], "https://api.chinacarapi.com/api/catalog/changes")
+        self.assertEqual(fake.calls[1]["params"], {"source": "che168", "cursor": 7})
+        self.assertEqual(client.china.last_cursor, 9)
+
     def test_403_carries_body(self):
         client = EnCarAPI("kr_key")
         patch_session(client.korea._http, [(403, {"error": "Upgrade to Business"})])
