@@ -6,7 +6,7 @@ Official **Python client** for [EnCarAPI](https://encarapi.com), the REST **Enca
 - **Korea:** Encar.com, KB Chachacha (`source="kbc"`) and K Car (`source="kcar"`), with
   photos, specs, options, inspection reports, accident and ownership records, condition
   reports, price history, a change feed and full catalog export.
-- **China:** Dongchedi and Che168 in English via [ChinaCarAPI](https://chinacarapi.com)
+- **China:** Dongchedi and Che168 in English via [ChinaCarAPI](https://chinacarapi.com/?utm_source=github&utm_medium=encarapi_sdk_python)
   (separate key or the China add-on for EnCarAPI keys).
 
 Built for car exporters, dealers and marketplaces that need reliable used car data without
@@ -131,7 +131,7 @@ except EnCarAPIError as e:
 - Website and pricing: https://encarapi.com
 - Documentation: https://encarapi.com/documentation
 - OpenAPI reference: https://api.encarapi.com/reference
-- China data: https://chinacarapi.com
+- China data: https://chinacarapi.com/?utm_source=github&utm_medium=encarapi_sdk_python
 - Node.js client: https://github.com/ThatMojo/encarapi-node
 
 EnCarAPI is an independent service and not affiliated with Encar, KB Chachacha, K Car,
