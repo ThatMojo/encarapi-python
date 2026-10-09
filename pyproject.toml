@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "encarapi"
-version = "1.1.0"
+version = "1.1.1"
 description = "Official Python client for EnCarAPI: Korean used car data (Encar, KB Chachacha, K Car) and Chinese used car data (Dongchedi, Che168) in one REST API."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -38,10 +38,10 @@ classifiers = [
 dependencies = ["requests>=2.20"]
 
 [project.urls]
-Homepage = "https://encarapi.com"
-Documentation = "https://encarapi.com/documentation"
+Homepage = "https://encarapi.com/?utm_source=pypi&utm_medium=encarapi-python"
+Documentation = "https://encarapi.com/documentation?utm_source=pypi&utm_medium=encarapi-python"
 Source = "https://github.com/ThatMojo/encarapi-python"
-"China data" = "https://chinacarapi.com"
+"China data" = "https://chinacarapi.com/?utm_source=pypi&utm_medium=encarapi-python"
 
 [tool.hatch.build.targets.wheel]
 packages = ["encarapi"]

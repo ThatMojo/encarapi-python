@@ -21,8 +21,8 @@ __all__ = [
 KOREA_BASE_URL = "https://api.encarapi.com"
 CHINA_BASE_URL = "https://api.chinacarapi.com"
 DEFAULT_BASE_URL = KOREA_BASE_URL  # 0.x compatibility
-SIGNUP_URL = "https://encarapi.com"
-CHINA_SIGNUP_URL = "https://chinacarapi.com"
+SIGNUP_URL = "https://encarapi.com/?utm_source=sdk&utm_medium=encarapi-python&utm_content=error#pricing"
+CHINA_SIGNUP_URL = "https://chinacarapi.com/?utm_source=sdk&utm_medium=encarapi-python&utm_content=error#pricing"
 # /api/catalog on the China API serves at most this many results per query (page * limit).
 CHINA_CATALOG_DEPTH = 10000
 
