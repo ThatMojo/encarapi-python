@@ -143,6 +143,27 @@ class KoreaClient:
                 return
             page += 1
 
+    def iterate_catalog_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Complete, stable traversal via ``sort=id`` + ``after`` (keyset cursor):
+        listings never shift between pages while the catalog changes, so nothing is
+        repeated or skipped. ``for car in korea.iterate_catalog_by_id(manufacturer="Kia"): ...``"""
+        yield from self._iterate_by_id("/api/catalog", params)
+
+    def iterate_leasing_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Same as ``iterate_catalog_by_id`` for lease-takeover and rental listings."""
+        yield from self._iterate_by_id("/api/catalog/leasing", params)
+
+    def _iterate_by_id(self, path: str, params: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
+        params = dict(params)
+        params.pop("page", None)
+        query = {**params, "sort": "id", "limit": params.get("limit", 1000)}
+        while True:
+            res = self._get(path, query)
+            yield from res.get("SearchResults") or []
+            if not res.get("hasMore") or not res.get("nextAfter"):
+                return
+            query = {**query, "after": res["nextAfter"]}
+
     # -- one vehicle ---------------------------------------------------------
     def vehicle(self, vehicle_id: str, **params: Any) -> Any:
         """Full vehicle detail. Ids: Encar id, ``kbc:<id>`` or ``kcar:<id>``."""
@@ -207,7 +228,8 @@ class KoreaClient:
             query["cursor"] = res["nextCursor"]
 
     def export_csv(self, **params: Any) -> str:
-        """Full catalog as CSV text."""
+        """Full catalog as CSV text. ``sell_type="lease,rental"`` for the lease/rental
+        inventory, ``source="kbc"`` etc. for other marketplaces."""
         return self._get("/api/catalog/export", params, text=True)
 
     # -- reference data -------------------------------------------------------
