@@ -85,6 +85,7 @@ save_cursor(client.china.last_cursor)
 | `iterate_leasing_by_id(**params)` | `GET /api/catalog/leasing?sort=id` | Complete, stable traversal of lease/rental listings |
 | `vehicle_by_vin(vin)` | `GET /api/vehicle/by-vin/{vin}` | All listings of one VIN incl. removed ones (Business/Scale) |
 | `trucks(**params)` | `GET /api/catalog/trucks` | Trucks, buses and special vehicles (Business/Scale) |
+| `truck(id)` | `GET /api/catalog/trucks/{id}` | One truck with detail, inspection report, cargo box, VIN and plate |
 | `truck_enums()` | `GET /api/catalog/trucks/enums` | Truck filter values with counts |
 | `trucks_csv()` | `GET /api/catalog/trucks/export` | Full truck inventory CSV (Business/Scale) |
 | `iterate_trucks_by_id(**params)` | `GET /api/catalog/trucks?sort=id` | Complete, stable traversal of the truck catalog |

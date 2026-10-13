@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- `korea.truck(id)`: one truck with detail page, inspection report, cargo box dimensions, VIN and plate.
+
 ## 1.3.0
 
 - Trucks, buses and special vehicles (Encar Truck, Business/Scale): `korea.trucks(**params)`,

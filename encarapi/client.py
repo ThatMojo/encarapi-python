@@ -162,6 +162,10 @@ class KoreaClient:
         """Encar trucks & buses, e.g. ``trucks(form="cargo", max_tons=1, lang="en")``. Values from ``truck_enums()``."""
         return self._get("/api/catalog/trucks", params)
 
+    def truck(self, truck_id: str, **params: Any) -> Any:
+        """One truck with detail page, inspection report, cargo box dimensions, VIN and plate (Business/Scale)."""
+        return self._get(f"/api/catalog/trucks/{quote(str(truck_id), safe='')}", params)
+
     def truck_enums(self) -> Any:
         """Valid truck filter values with counts."""
         return self._get("/api/catalog/trucks/enums", {})
