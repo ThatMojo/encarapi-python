@@ -153,6 +153,44 @@ class KoreaClient:
         """Same as ``iterate_catalog_by_id`` for lease-takeover and rental listings."""
         yield from self._iterate_by_id("/api/catalog/leasing", params)
 
+    def vehicle_by_vin(self, vin: str) -> Any:
+        """Every Encar / K Car listing of one VIN, active and removed (Business/Scale)."""
+        return self._get(f"/api/vehicle/by-vin/{quote(str(vin), safe='')}", {})
+
+    # -- trucks, buses, special vehicles (Business/Scale) -------------------
+    def trucks(self, **params: Any) -> Any:
+        """Encar trucks & buses, e.g. ``trucks(form="cargo", max_tons=1, lang="en")``. Values from ``truck_enums()``."""
+        return self._get("/api/catalog/trucks", params)
+
+    def truck_enums(self) -> Any:
+        """Valid truck filter values with counts."""
+        return self._get("/api/catalog/trucks/enums", {})
+
+    def trucks_csv(self, **params: Any) -> str:
+        """Full truck inventory as CSV text (Business/Scale)."""
+        return self._get("/api/catalog/trucks/export", params, text=True)
+
+    def iterate_trucks_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Complete, stable traversal of the truck catalog (``sort=id`` + ``after``)."""
+        yield from self._iterate_by_id("/api/catalog/trucks", params)
+
+    # -- construction equipment / excavators (Business/Scale) ---------------
+    def equipment(self, **params: Any) -> Any:
+        """Used excavators from 굴삭기나라, e.g. ``equipment(sub_type="crawler", max_hours=5000)``."""
+        return self._get("/api/catalog/equipment", params)
+
+    def equipment_enums(self) -> Any:
+        """Valid equipment filter values with counts."""
+        return self._get("/api/catalog/equipment/enums", {})
+
+    def equipment_csv(self, **params: Any) -> str:
+        """Full equipment inventory as CSV text (Business/Scale)."""
+        return self._get("/api/catalog/equipment/export", params, text=True)
+
+    def iterate_equipment_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
+        """Complete, stable traversal of the equipment catalog (``sort=id`` + ``after``)."""
+        yield from self._iterate_by_id("/api/catalog/equipment", params)
+
     def _iterate_by_id(self, path: str, params: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
         params = dict(params)
         params.pop("page", None)
