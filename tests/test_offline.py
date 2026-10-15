@@ -81,6 +81,12 @@ class OfflineTests(unittest.TestCase):
         self.assertTrue(fake.calls[-1]["url"].startswith("https://api.chinacarapi.com/"))
         self.assertEqual(fake.headers["x-api-key"], "cn_key")
 
+    def test_china_specs(self):
+        client = ChinaCarAPI("cn_key")
+        fake = patch_session(client._http, [(200, {"trimId": 62342})])
+        client.specs(62342)
+        self.assertTrue(fake.calls[-1]["url"].endswith("/api/specs/62342"))
+
     def test_iterate_changes(self):
         client = EnCarAPI("kr_key")
         fake = patch_session(client.korea._http, [

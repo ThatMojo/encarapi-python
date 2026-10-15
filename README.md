@@ -115,6 +115,7 @@ save_cursor(client.china.last_cursor)
 | `iterate_catalog(**params)` | `GET /api/catalog` | Generator over all pages (up to the 10,000-result depth limit) |
 | `vehicle(id)` | `GET /api/vehicle/{id}` | Price history, photos, seller, export status |
 | `inspection(id)` | `GET /api/inspection/{id}` | Accident, flood and fire checks, EV battery data |
+| `specs(trim_id)` | `GET /api/specs/{trimId}` | Autohome trim sheet of a Che168 car: cc, kW, hp, torque, emission standard, weights, EV battery |
 | `bulk_vehicles(ids)` | `POST /api/vehicle/bulk` | Up to 500 ids |
 | `changes(**params)` / `iterate_changes(**params)` | `GET /api/catalog/changes` | Change feed (Business/Scale) |
 | `export_csv()` | `GET /api/catalog/export` | Full catalog CSV |

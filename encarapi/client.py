@@ -323,6 +323,11 @@ class ChinaClient:
         """Inspection report: accident, flood and fire checks, battery data for EVs."""
         return self._http.request("GET", f"/api/inspection/{_enc(vehicle_id)}", params)
 
+    def specs(self, trim_id: Any) -> Any:
+        """Autohome specification sheet of a Che168 trim (``trim.id`` of a vehicle record):
+        cc, kW, hp, torque, emission standard, weights, EV battery."""
+        return self._http.request("GET", f"/api/specs/{_enc(str(trim_id))}", {})
+
     def bulk_vehicles(self, ids: Iterable[str], **params: Any) -> Any:
         """Up to 500 full records in one call (Business/Scale)."""
         return self._http.request("POST", "/api/vehicle/bulk", params, json={"ids": list(ids)})

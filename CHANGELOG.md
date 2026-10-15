@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- `china.specs(trim_id)`: Autohome specification sheet of a Che168 trim (displacement in cc, power in kW
+  and hp also for EVs, torque, emission standard, wheelbase, weights, tank, gears, drive type, EV battery).
+- China vehicle records now carry `manufactureDate` (Che168, month of manufacture where published) and a
+  `specs` object with the key figures of the trim sheet; the CSV export gained `manufacture_date`,
+  `displacement_cc` and `power_kw`.
+
 ## 1.3.1
 
 - `korea.truck(id)`: one truck with detail page, inspection report, cargo box dimensions, VIN and plate.
