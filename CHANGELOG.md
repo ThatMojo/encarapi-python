@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1
+
+- Korea change feed: every entry now carries `eventId` (its position in the log, same scale as `nextCursor`)
+  and `occurredAt`. `iterate_changes()` yields the entries of a page in event order across the groups, so a
+  later event for the same listing always comes last (e.g. `removed` after `updated`).
+
 ## 1.4.0
 
 - `china.specs(trim_id)`: Autohome specification sheet of a Che168 trim (displacement in cc, power in kW

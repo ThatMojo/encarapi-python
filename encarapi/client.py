@@ -259,9 +259,12 @@ class KoreaClient:
         query = dict(params)
         while True:
             res = self.changes(**query)
-            for kind in ("added", "updated", "reappeared", "removed"):
-                for item in res.get(kind) or []:
-                    yield {"type": kind, **item}
+            page = [{"type": kind, **item} for kind in ("added", "updated", "reappeared", "removed") for item in res.get(kind) or []]
+            # Entries carry eventId (API since 2026-10-17): yield them in event order
+            # across the groups, so a later event for the same listing always comes last.
+            if all(e.get("eventId") is not None for e in page):
+                page.sort(key=lambda e: int(e["eventId"]))
+            yield from page
             if res.get("nextCursor") is not None:
                 self.last_cursor = res["nextCursor"]
             if not (res.get("hasMore") or res.get("truncated")) or res.get("nextCursor") is None:

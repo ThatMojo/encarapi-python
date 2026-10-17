@@ -98,6 +98,15 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual(fake.calls[1]["params"], {"cursor": 10})
         self.assertEqual(client.korea.last_cursor, 12)
 
+    def test_iterate_changes_event_order(self):
+        client = EnCarAPI("kr_key")
+        patch_session(client.korea._http, [
+            (200, {"nextCursor": "103", "hasMore": False, "added": [{"Id": "a", "eventId": "101"}],
+                   "updated": [{"Id": "b", "eventId": "103"}], "removed": [{"listingId": "b", "eventId": "102"}]}),
+        ])
+        events = list(client.korea.iterate_changes(cursor=100))
+        self.assertEqual([f'{e["type"]}:{e["eventId"]}' for e in events], ["added:101", "removed:102", "updated:103"])
+
     def test_iterate_catalog_stops_on_short_page(self):
         client = EnCarAPI("kr_key")
         patch_session(client.korea._http, [(200, {"SearchResults": [{"Id": "1"}]})])
