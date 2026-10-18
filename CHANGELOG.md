@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0
+
+- China: `china.vehicle_by_url(url)` (`GET /api/vehicle/by-url`) returns the full record for a Che168 or
+  Dongchedi listing link - desktop, mobile site (e.g. `m.che168.com/cardetail/index?infoid=...`) or app,
+  also inside a pasted share text. Short links are not resolved.
+- China: `catalog()` accepts `power_min` / `power_max` (hp). With either set, cars without a known power
+  figure are left out.
+
 ## 1.4.1
 
 - Korea change feed: every entry now carries `eventId` (its position in the log, same scale as `nextCursor`)

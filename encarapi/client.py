@@ -301,7 +301,8 @@ class ChinaClient:
 
     def catalog(self, **params: Any) -> Any:
         """Search listings. Filters: source, make, model, year_min/max, price_min/max (CNY),
-        mileage_max, city, fuel, has_report, export_ready, sort, page, limit, lang ('zh' = original)."""
+        mileage_max, power_min/max (hp), city, fuel, has_report, export_ready, sort, page, limit,
+        lang ('zh' = original)."""
         return self._http.request("GET", "/api/catalog", params)
 
     def iterate_catalog(self, **params: Any) -> Iterator[Dict[str, Any]]:
@@ -321,6 +322,11 @@ class ChinaClient:
     def vehicle(self, vehicle_id: str, **params: Any) -> Any:
         """Full record: price history, photos, seller, export status, alsoListedOn."""
         return self._http.request("GET", f"/api/vehicle/{_enc(vehicle_id)}", params)
+
+    def vehicle_by_url(self, url: str, **params: Any) -> Any:
+        """Same full record, looked up by a Che168 or Dongchedi listing link (desktop, mobile or
+        app; a pasted share text works too)."""
+        return self._http.request("GET", "/api/vehicle/by-url", {**params, "url": url})
 
     def inspection(self, vehicle_id: str, **params: Any) -> Any:
         """Inspection report: accident, flood and fire checks, battery data for EVs."""

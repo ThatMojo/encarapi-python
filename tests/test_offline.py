@@ -87,6 +87,14 @@ class OfflineTests(unittest.TestCase):
         client.specs(62342)
         self.assertTrue(fake.calls[-1]["url"].endswith("/api/specs/62342"))
 
+    def test_china_vehicle_by_url(self):
+        client = ChinaCarAPI("cn_key")
+        fake = patch_session(client._http, [(200, {"id": "60234085"})])
+        client.vehicle_by_url("https://m.che168.com/cardetail/index?infoid=60234085&x=1")
+        call = fake.calls[-1]
+        self.assertIn("/api/vehicle/by-url", call["url"])
+        self.assertEqual(call["params"]["url"], "https://m.che168.com/cardetail/index?infoid=60234085&x=1")
+
     def test_iterate_changes(self):
         client = EnCarAPI("kr_key")
         fake = patch_session(client.korea._http, [

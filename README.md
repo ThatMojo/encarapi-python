@@ -111,9 +111,10 @@ save_cursor(client.china.last_cursor)
 
 | Method | Endpoint | Notes |
 |---|---|---|
-| `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `export_ready`, `sort`, ... |
+| `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `power_min/max` (hp), `export_ready`, `sort`, ... |
 | `iterate_catalog(**params)` | `GET /api/catalog` | Generator over all pages (up to the 10,000-result depth limit) |
 | `vehicle(id)` | `GET /api/vehicle/{id}` | Price history, photos, seller, export status |
+| `vehicle_by_url(url)` | `GET /api/vehicle/by-url` | Same record by Che168/Dongchedi listing link (desktop, mobile or app) |
 | `inspection(id)` | `GET /api/inspection/{id}` | Accident, flood and fire checks, EV battery data |
 | `specs(trim_id)` | `GET /api/specs/{trimId}` | Autohome trim sheet of a Che168 car: cc, kW, hp, torque, emission standard, weights, EV battery |
 | `bulk_vehicles(ids)` | `POST /api/vehicle/bulk` | Up to 500 ids |
