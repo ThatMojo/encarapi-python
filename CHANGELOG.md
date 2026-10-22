@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.0
+
+- New: `korea.export_to_file(path, **params)` and `china.export_to_file(path, **params)` stream the full
+  catalog export to a file in chunks instead of holding it in memory and return
+  `{"path", "bytes", "generated_at"}`. `generated_at` is the export's timestamp header (Korea
+  `X-Encarapi-Generated-At`, China `x-generated-at`; `None` if absent): pass it as `since` to `changes()` /
+  `iterate_changes()` for the first sync, then continue with the cursor. The file is written to
+  `<path>.part` and renamed when complete. Same for the Korea truck and equipment exports:
+  `korea.export_trucks_to_file()` and `korea.export_equipment_to_file()`. `export_csv()`, `trucks_csv()`
+  and `equipment_csv()` are unchanged.
+- China: Russian values (API release 22 October 2026). `catalog`, `vehicle`, `vehicle_by_url`,
+  `bulk_vehicles` and `specs` take `lang="ru"`: fuel, transmission, drivetrain, colours, seller type,
+  condition, vehicle class, city names and equipment names in Russian; make, model and trim names stay
+  Latin. `enums(lang="ru")` adds `nameRu` to fuels and cities, `export_csv(lang="ru")` returns the label
+  columns in Russian.
+- `china.specs(trim_id, **params)` now passes params (`lang`); before, it took none.
+
 ## 1.6.0
 
 - Russian and German values (API release 22 October 2026): every Korea call that takes `lang="en"` now also

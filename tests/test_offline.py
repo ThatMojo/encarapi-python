@@ -90,6 +90,24 @@ class OfflineTests(unittest.TestCase):
         client.specs(62342)
         self.assertTrue(fake.calls[-1]["url"].endswith("/api/specs/62342"))
 
+    def test_china_lang_ru(self):
+        client = ChinaCarAPI("cn_key")
+        fake = patch_session(client._http, [(200, {})])
+        client.catalog(make="BYD", lang="ru")
+        client.vehicle("357018451", lang="ru")
+        client.vehicle_by_url("https://www.dongchedi.com/usedcar/20984385", lang="ru")
+        client.bulk_vehicles(["1"], lang="ru")
+        client.specs(62342, lang="ru")
+        client.enums(lang="ru")
+        self.assertEqual([c["params"]["lang"] for c in fake.calls], ["ru"] * 6)
+        self.assertTrue(fake.calls[4]["url"].endswith("/api/specs/62342"))
+        client.specs(62342)
+        self.assertIsNone(fake.calls[-1]["params"])
+        fake.responses = [(200, "a,b\n")]
+        self.assertEqual(client.export_csv(lang="ru"), "a,b\n")
+        self.assertEqual(fake.calls[-1]["params"], {"lang": "ru"})
+        self.assertEqual(fake.calls[-1]["headers"], {"Accept": "text/csv"})
+
     def test_china_vehicle_by_url(self):
         client = ChinaCarAPI("cn_key")
         fake = patch_session(client._http, [(200, {"id": "60234085"})])

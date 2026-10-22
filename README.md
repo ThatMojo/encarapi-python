@@ -65,25 +65,56 @@ de = client.korea.catalog(model_group="C-Klasse", fuel="Benzin", lang="de", limi
 enums_de = client.korea.enums(lang="de")  # nameDe per value
 ```
 
-## Keep a local copy in sync (Business / Scale)
+China calls take `lang="zh"` (original Chinese values) or `lang="ru"`: Russian values for the fixed fields
+(fuel, transmission, drivetrain, colours, seller type, condition, vehicle class), city names and equipment
+names on `catalog`, `vehicle`, `vehicle_by_url`, `bulk_vehicles` and `specs`. Make, model and trim names stay
+Latin. `enums(lang="ru")` adds `nameRu` to fuels and cities, `export_csv(lang="ru")` /
+`export_to_file(path, lang="ru")` return the label columns in Russian.
 
 ```python
-csv_text = client.korea.export_csv()          # 1) baseline
+cn = client.china.catalog(make="BYD", lang="ru", limit=10)
+```
 
-for change in client.korea.iterate_changes(cursor=saved_cursor or 0):   # 2) deltas
-    # change["type"]: "added" | "updated" | "reappeared" | "removed"
+## Keep a local copy in sync (Business / Scale)
+
+Three steps: export to a file, start the change feed at the export's timestamp, then keep the cursor.
+
+```python
+# 1) Baseline: stream the full catalog to a file (not held in memory)
+export = client.korea.export_to_file("catalog.csv")   # {"path", "bytes", "generated_at"}
+import_csv(export["path"])                             # your import: upsert by listing_id
+
+# 2) First sync: start the change feed at the export's generated_at
+#    (X-Encarapi-Generated-At, not the time of your download)
+for change in client.korea.iterate_changes(since=export["generated_at"]):
+    # change["type"]: "added" | "updated" | "reappeared" | "removed"; apply idempotently
+    ...
+save_cursor(client.korea.last_cursor)
+
+# 3) Every later sync: continue from the saved cursor
+for change in client.korea.iterate_changes(cursor=load_cursor()):
     ...
 save_cursor(client.korea.last_cursor)
 ```
 
-The China API works the same way (`client.china`); its events are
+`generated_at` lies a few minutes before the file's data snapshot, so the first feed page can repeat a few
+events that are already in the file: apply them as upserts. Use the same `source` / `sell_type` for the
+export and the feed (e.g. `export_to_file("kbc.csv", source="kbc")`, then
+`iterate_changes(source="kbc", since=...)`). `export_csv()` still returns the CSV as one string, but without
+the timestamp; for large catalogs use `export_to_file()`. Trucks and excavators work the same way with
+`export_trucks_to_file()` / `export_equipment_to_file()` and `source="truck"` / `"equipment"` on the feed.
+The file is written to `<path>.part` first and renamed when complete, so an aborted download never leaves
+a truncated file under the final name.
+
+The China API works the same way (`client.china`, header `x-generated-at`); its events are
 `{"id", "source", "vehicleId", "type": "new" | "price" | "removed" | "relisted", "oldPrice", "newPrice", "at"}`:
 
 ```python
-for change in client.china.iterate_changes(cursor=saved_cursor or 0):
+export = client.china.export_to_file("china-catalog.csv")
+for change in client.china.iterate_changes(since=export["generated_at"]):
     # change["type"]: "new" | "price" | "removed" | "relisted"
     ...
-save_cursor(client.china.last_cursor)
+save_cursor(client.china.last_cursor)   # later: iterate_changes(cursor=load_cursor())
 ```
 
 ## Korea API (`client.korea`)
@@ -100,10 +131,12 @@ save_cursor(client.china.last_cursor)
 | `truck(id)` | `GET /api/catalog/trucks/{id}` | One truck with detail, inspection report, cargo box, VIN and plate |
 | `truck_enums()` | `GET /api/catalog/trucks/enums` | Truck filter values with counts |
 | `trucks_csv()` | `GET /api/catalog/trucks/export` | Full truck inventory CSV (Business/Scale) |
+| `export_trucks_to_file(path, **params)` | `GET /api/catalog/trucks/export` | Same, streamed to a file: `{"path", "bytes", "generated_at"}` |
 | `iterate_trucks_by_id(**params)` | `GET /api/catalog/trucks?sort=id` | Complete, stable traversal of the truck catalog |
 | `equipment(**params)` | `GET /api/catalog/equipment` | Used excavators (Business/Scale) |
 | `equipment_enums()` | `GET /api/catalog/equipment/enums` | Equipment filter values with counts |
 | `equipment_csv()` | `GET /api/catalog/equipment/export` | Full equipment inventory CSV (Business/Scale) |
+| `export_equipment_to_file(path, **params)` | `GET /api/catalog/equipment/export` | Same, streamed to a file: `{"path", "bytes", "generated_at"}` |
 | `iterate_equipment_by_id(**params)` | `GET /api/catalog/equipment?sort=id` | Complete, stable traversal of the equipment catalog |
 | `nav(**params)` | `GET /api/nav` | Filter facets with counts |
 | `enums(**params)` | `GET /api/enums` | Valid values for the flat filters |
@@ -117,22 +150,24 @@ save_cursor(client.china.last_cursor)
 | `inspection_versions(id)` / `record_versions(id)` | `GET /api/.../versions` | Report history (Business/Scale) |
 | `changes(**params)` / `iterate_changes(**params)` | `GET /api/catalog/changes` | Incremental sync (Business/Scale) |
 | `export_csv(**params)` | `GET /api/catalog/export` | Full catalog CSV (Business/Scale); `sell_type="lease,rental"` for lease/rental |
+| `export_to_file(path, **params)` | `GET /api/catalog/export` | Same export streamed to a file: `{"path", "bytes", "generated_at"}` (start of the change feed) |
 | `makes_csv()` / `models_csv()` / `badges_csv()` | `GET /api/taxonomy/*.csv` | Reference data |
 
 ## China API (`client.china`)
 
 | Method | Endpoint | Notes |
 |---|---|---|
-| `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `power_min/max` (hp), `export_ready`, `sort`, ... |
+| `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `power_min/max` (hp), `export_ready`, `sort`, `lang` (`zh`, `ru`), ... |
 | `iterate_catalog(**params)` | `GET /api/catalog` | Generator over all pages (up to the 10,000-result depth limit) |
 | `vehicle(id)` | `GET /api/vehicle/{id}` | Price history, photos, seller, export status |
 | `vehicle_by_url(url)` | `GET /api/vehicle/by-url` | Same record by Che168/Dongchedi listing link (desktop, mobile or app) |
 | `inspection(id)` | `GET /api/inspection/{id}` | Accident, flood and fire checks, EV battery data |
-| `specs(trim_id)` | `GET /api/specs/{trimId}` | Autohome trim sheet of a Che168 car: cc, kW, hp, torque, emission standard, weights, EV battery |
+| `specs(trim_id, **params)` | `GET /api/specs/{trimId}` | Autohome trim sheet of a Che168 car: cc, kW, hp, torque, emission standard, weights, EV battery |
 | `bulk_vehicles(ids)` | `POST /api/vehicle/bulk` | Up to 500 ids |
 | `changes(**params)` / `iterate_changes(**params)` | `GET /api/catalog/changes` | Change feed (Business/Scale) |
-| `export_csv()` | `GET /api/catalog/export` | Full catalog CSV |
-| `enums()` / `models(make)` | `GET /api/enums`, `/api/models` | Filter values, models per make |
+| `export_csv(**params)` | `GET /api/catalog/export` | Full catalog CSV; `lang="ru"` for Russian label columns |
+| `export_to_file(path, **params)` | `GET /api/catalog/export` | Same export streamed to a file: `{"path", "bytes", "generated_at"}` (start of the change feed) |
+| `enums(**params)` / `models(make)` | `GET /api/enums`, `/api/models` | Filter values (`lang="ru"` adds `nameRu`), models per make |
 
 China only? `from encarapi import ChinaCarAPI` (also available as the
 [`chinacarapi`](https://pypi.org/project/chinacarapi/) package).

@@ -25,6 +25,9 @@ SIGNUP_URL = "https://encarapi.com/?utm_source=sdk&utm_medium=encarapi-python&ut
 CHINA_SIGNUP_URL = "https://chinacarapi.com/?utm_source=sdk&utm_medium=encarapi-python&utm_content=error#pricing"
 # /api/catalog on the China API serves at most this many results per query (page * limit).
 CHINA_CATALOG_DEPTH = 10000
+# Export headers to pass as ``since`` to /api/catalog/changes (a few minutes before the data snapshot).
+KOREA_GENERATED_AT = "X-Encarapi-Generated-At"
+CHINA_GENERATED_AT = "x-generated-at"
 
 
 class EnCarAPIError(Exception):
@@ -73,11 +76,7 @@ class _Http:
             out[k] = v
         return out
 
-    def request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None, json: Any = None, text: bool = False) -> Any:
-        resp = self.session.request(
-            method, f"{self.base_url}{path}", params=self._clean(params), json=json, timeout=self.timeout,
-            headers={"Accept": "text/csv"} if text else None,
-        )
+    def _check(self, resp: Any) -> None:
         if resp.status_code in (401, 403):
             raise EnCarAPIError(
                 f"{self.product} rejected the request ({resp.status_code}). Check your key or plan at "
@@ -86,12 +85,58 @@ class _Http:
             )
         if not resp.ok:
             raise EnCarAPIError(f"{self.product} error {resp.status_code}: {resp.text[:300]}", resp.status_code, resp.text)
+
+    def request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None, json: Any = None, text: bool = False) -> Any:
+        resp = self.session.request(
+            method, f"{self.base_url}{path}", params=self._clean(params), json=json, timeout=self.timeout,
+            headers={"Accept": "text/csv"} if text else None,
+        )
+        self._check(resp)
         if text:
             return resp.text
         try:
             return resp.json()
         except ValueError:
             return resp.text
+
+    def download(self, path: str, dest: Any, params: Optional[Dict[str, Any]], generated_at_header: str) -> Dict[str, Any]:
+        """Streams a GET response (a CSV export) to the file ``dest`` in chunks instead of holding
+        it in memory. The data goes to ``<dest>.part`` first and is renamed when complete, so an
+        aborted download never leaves a truncated file under the final name."""
+        dest = os.fspath(dest)
+        tmp = f"{dest}.part"
+        resp = self.session.request(
+            "GET", f"{self.base_url}{path}", params=self._clean(params), timeout=self.timeout,
+            headers={"Accept": "text/csv"}, stream=True,
+        )
+        try:
+            self._check(resp)
+            written = 0
+            try:
+                with open(tmp, "wb") as fh:
+                    # iter_content undoes a gzip/deflate transfer encoding (compress=true).
+                    for chunk in resp.iter_content(chunk_size=1 << 16):
+                        fh.write(chunk)
+                        written += len(chunk)
+                # urllib3 1.x ends a body that is shorter than Content-Length without an error;
+                # raw.tell() counts the bytes on the wire (before gzip decoding).
+                length = resp.headers.get("Content-Length")
+                received = resp.raw.tell() if hasattr(resp.raw, "tell") else None
+                if length is not None and length.isdigit() and received is not None and received != int(length):
+                    raise EnCarAPIError(
+                        f"{self.product} export ended early ({received} of {length} bytes); retry the download",
+                        resp.status_code, None,
+                    )
+                os.replace(tmp, dest)
+            except BaseException:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+                raise
+            return {"path": dest, "bytes": written, "generated_at": resp.headers.get(generated_at_header)}
+        finally:
+            resp.close()
 
 
 class KoreaClient:
@@ -175,6 +220,12 @@ class KoreaClient:
         """Full truck inventory as CSV text (Business/Scale)."""
         return self._get("/api/catalog/trucks/export", params, text=True)
 
+    def export_trucks_to_file(self, path: Any, **params: Any) -> Dict[str, Any]:
+        """Streams the truck export to a file (not held in memory). Returns
+        ``{"path", "bytes", "generated_at"}``; continue with
+        ``changes(source="truck", since=generated_at)``."""
+        return self._http.download("/api/catalog/trucks/export", path, params, KOREA_GENERATED_AT)
+
     def iterate_trucks_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
         """Complete, stable traversal of the truck catalog (``sort=id`` + ``after``)."""
         yield from self._iterate_by_id("/api/catalog/trucks", params)
@@ -191,6 +242,12 @@ class KoreaClient:
     def equipment_csv(self, **params: Any) -> str:
         """Full equipment inventory as CSV text (Business/Scale)."""
         return self._get("/api/catalog/equipment/export", params, text=True)
+
+    def export_equipment_to_file(self, path: Any, **params: Any) -> Dict[str, Any]:
+        """Streams the equipment export to a file (not held in memory). Returns
+        ``{"path", "bytes", "generated_at"}``; continue with
+        ``changes(source="equipment", since=generated_at)``."""
+        return self._http.download("/api/catalog/equipment/export", path, params, KOREA_GENERATED_AT)
 
     def iterate_equipment_by_id(self, **params: Any) -> Iterator[Dict[str, Any]]:
         """Complete, stable traversal of the equipment catalog (``sort=id`` + ``after``)."""
@@ -250,7 +307,8 @@ class KoreaClient:
         return self._post("/api/record/bulk", {"ids": list(ids)})
 
     def changes(self, **params: Any) -> Any:
-        """Incremental change feed: ``cursor`` from the previous call, or ``since`` right after an export."""
+        """Incremental change feed: ``cursor`` from the previous call, or ``since`` = ``generated_at``
+        of an export (``export_to_file()``)."""
         return self._get("/api/catalog/changes", params)
 
     def iterate_changes(self, **params: Any) -> Iterator[Dict[str, Any]]:
@@ -278,6 +336,13 @@ class KoreaClient:
         inventory, ``source="kbc"`` etc. for other marketplaces."""
         return self._get("/api/catalog/export", params, text=True)
 
+    def export_to_file(self, path: Any, **params: Any) -> Dict[str, Any]:
+        """Streams the full catalog export to a file instead of holding it in memory (same
+        params as ``export_csv``). Returns ``{"path", "bytes", "generated_at"}``;
+        ``generated_at`` is the X-Encarapi-Generated-At header (``None`` if absent): start the
+        change feed with ``iterate_changes(since=generated_at)``."""
+        return self._http.download("/api/catalog/export", path, params, KOREA_GENERATED_AT)
+
     # -- reference data -------------------------------------------------------
     def makes_csv(self, **params: Any) -> str:
         """All makes as CSV."""
@@ -303,13 +368,15 @@ class ChinaClient:
     def catalog(self, **params: Any) -> Any:
         """Search listings. Filters: source, make, model, year_min/max, price_min/max (CNY),
         mileage_max, power_min/max (hp), city, fuel, has_report, export_ready, sort, page, limit,
-        lang ('zh' = original)."""
+        lang (``"zh"`` = original Chinese values, ``"ru"`` = Russian values for the fixed fields
+        (fuel, transmission, drivetrain, colours, seller type, condition, vehicle class), city names
+        and equipment names; make, model and trim names stay Latin)."""
         return self._http.request("GET", "/api/catalog", params)
 
     def iterate_catalog(self, **params: Any) -> Iterator[Dict[str, Any]]:
         """Yields every listing across all pages: ``for car in china.iterate_catalog(make="BYD"): ...``
         Stops at the API's 10,000-result depth limit; for the whole catalog use
-        ``export_csv()`` plus ``iterate_changes()``."""
+        ``export_to_file()`` plus ``iterate_changes()``."""
         limit = min(params.pop("limit", 100), 100)
         page = params.pop("page", 1)
         while True:
@@ -321,32 +388,35 @@ class ChinaClient:
             page += 1
 
     def vehicle(self, vehicle_id: str, **params: Any) -> Any:
-        """Full record: price history, photos, seller, export status, alsoListedOn."""
+        """Full record: price history, photos, seller, export status, alsoListedOn.
+        ``lang="zh"`` or ``"ru"`` as on ``catalog()``."""
         return self._http.request("GET", f"/api/vehicle/{_enc(vehicle_id)}", params)
 
     def vehicle_by_url(self, url: str, **params: Any) -> Any:
         """Same full record, looked up by a Che168 or Dongchedi listing link (desktop, mobile or
-        app; a pasted share text works too)."""
+        app; a pasted share text works too). ``lang="zh"`` or ``"ru"`` as on ``catalog()``."""
         return self._http.request("GET", "/api/vehicle/by-url", {**params, "url": url})
 
     def inspection(self, vehicle_id: str, **params: Any) -> Any:
         """Inspection report: accident, flood and fire checks, battery data for EVs."""
         return self._http.request("GET", f"/api/inspection/{_enc(vehicle_id)}", params)
 
-    def specs(self, trim_id: Any) -> Any:
+    def specs(self, trim_id: Any, **params: Any) -> Any:
         """Autohome specification sheet of a Che168 trim (``trim.id`` of a vehicle record):
-        cc, kW, hp, torque, emission standard, weights, EV battery."""
-        return self._http.request("GET", f"/api/specs/{_enc(str(trim_id))}", {})
+        cc, kW, hp, torque, emission standard, weights, EV battery. ``lang="zh"`` or ``"ru"``
+        for the equipment names."""
+        return self._http.request("GET", f"/api/specs/{_enc(str(trim_id))}", params)
 
     def bulk_vehicles(self, ids: Iterable[str], **params: Any) -> Any:
-        """Up to 500 full records in one call (Business/Scale)."""
+        """Up to 500 full records in one call (Business/Scale). ``lang="zh"`` or ``"ru"`` as on ``catalog()``."""
         return self._http.request("POST", "/api/vehicle/bulk", params, json={"ids": list(ids)})
 
     # 0.x name used by the standalone chinacarapi client
     bulk = bulk_vehicles
 
     def changes(self, **params: Any) -> Any:
-        """Change feed: ``since`` once, then ``cursor=nextCursor`` (Business/Scale)."""
+        """Change feed: ``since`` once (the ``generated_at`` of an export), then ``cursor=nextCursor``
+        (Business/Scale)."""
         return self._http.request("GET", "/api/catalog/changes", params)
 
     def iterate_changes(self, **params: Any) -> Iterator[Dict[str, Any]]:
@@ -365,11 +435,19 @@ class ChinaClient:
             query["cursor"] = res["nextCursor"]
 
     def export_csv(self, **params: Any) -> str:
-        """Full catalog as CSV text (Business/Scale)."""
+        """Full catalog as CSV text (Business/Scale). ``lang="ru"``: the label columns in Russian."""
         return self._http.request("GET", "/api/catalog/export", params, text=True)
 
+    def export_to_file(self, path: Any, **params: Any) -> Dict[str, Any]:
+        """Streams the full catalog export to a file instead of holding it in memory (same
+        params as ``export_csv``). Returns ``{"path", "bytes", "generated_at"}``;
+        ``generated_at`` is the x-generated-at header (``None`` if absent): start the change
+        feed with ``iterate_changes(since=generated_at)``."""
+        return self._http.download("/api/catalog/export", path, params, CHINA_GENERATED_AT)
+
     def enums(self, **params: Any) -> Any:
-        """Filter values with counts: makes, fuels, cities, sources, sorts."""
+        """Filter values with counts: makes, fuels, cities, sources, sorts. ``lang="ru"`` adds
+        ``nameRu`` to fuels and cities."""
         return self._http.request("GET", "/api/enums", params)
 
     def models(self, make: str) -> Any:
