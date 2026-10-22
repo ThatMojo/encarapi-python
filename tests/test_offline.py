@@ -73,6 +73,9 @@ class OfflineTests(unittest.TestCase):
         client.korea.bulk_vehicles(["1", "2"])
         self.assertEqual(fake.calls[-1]["method"], "POST")
         self.assertEqual(fake.calls[-1]["json"], {"ids": ["1", "2"]})
+        client.korea.bulk_vehicles(["1"], lang="de")
+        self.assertEqual(fake.calls[-1]["params"], {"lang": "de"})
+        self.assertEqual(fake.calls[-1]["json"], {"ids": ["1"]})
 
     def test_china_uses_china_key_and_host(self):
         client = EnCarAPI("kr_key", china_key="cn_key")

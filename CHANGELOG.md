@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0
+
+- Russian and German values (API release 22 October 2026): every Korea call that takes `lang="en"` now also
+  takes `lang="ru"` or `lang="de"`. Display values (fuel, transmission, colors, body class, sell type,
+  regions, options; with `"de"` also model and trim names) come in Russian or German, ids and codes stay the
+  same, and the filters accept these values as well. `enums(lang=...)` adds `nameRu` / `nameDe`, the
+  reference CSVs get an extra `*_ru` / `*_de` column, `export_csv(lang=...)` has the label columns translated.
+- `korea.bulk_vehicles(ids, lang=...)` passes `lang` like `vehicle()` (before, it took no options).
+
 ## 1.5.1
 
 - Docs only, no runtime change. API release 22 October 2026: Encar items of the change feed

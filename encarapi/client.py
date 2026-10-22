@@ -112,7 +112,8 @@ class KoreaClient:
     # -- search ------------------------------------------------------------
     def catalog(self, **params: Any) -> Any:
         """Search & list vehicles with flat English filters, e.g.
-        ``catalog(manufacturer="BMW", max_mileage=50000, frame_clean=True, lang="en")``."""
+        ``catalog(manufacturer="BMW", max_mileage=50000, frame_clean=True, lang="en")``.
+        ``lang="ru"`` / ``"de"`` returns Russian / German display values; filters accept them too."""
         return self._get("/api/catalog", params)
 
     def leasing(self, **params: Any) -> Any:
@@ -236,9 +237,9 @@ class KoreaClient:
         return self._get(f"/api/record/{_enc(vehicle_id)}/versions")
 
     # -- bulk & sync (Business/Scale) ---------------------------------------
-    def bulk_vehicles(self, ids: Iterable[str]) -> Any:
-        """Up to 500 vehicle details in one call."""
-        return self._post("/api/vehicle/bulk", {"ids": list(ids)})
+    def bulk_vehicles(self, ids: Iterable[str], **params: Any) -> Any:
+        """Up to 500 vehicle details in one call. ``lang="en"``, ``"ru"`` or ``"de"`` as on ``vehicle()``."""
+        return self._http.request("POST", "/api/vehicle/bulk", params, json={"ids": list(ids)})
 
     def bulk_inspections(self, ids: Iterable[str]) -> Any:
         """Up to 500 inspection reports in one call."""

@@ -53,6 +53,18 @@ everything = client.korea.catalog(source="all", count=True)
 byd = client.china.catalog(make="BYD", export_ready=True, limit=25)
 ```
 
+### Russian and German values
+
+Every Korea call that takes `lang="en"` also takes `lang="ru"` or `lang="de"`: fuel, transmission, colors,
+body class, sell type, regions and options come in Russian or German (with `"de"` also model and trim names,
+e.g. `C-Klasse`, `5er`). Ids, codes and numbers stay the same, and the filters accept these values too.
+
+```python
+ru = client.korea.catalog(fuel="дизель", lang="ru", limit=10)
+de = client.korea.catalog(model_group="C-Klasse", fuel="Benzin", lang="de", limit=10)
+enums_de = client.korea.enums(lang="de")  # nameDe per value
+```
+
 ## Keep a local copy in sync (Business / Scale)
 
 ```python
