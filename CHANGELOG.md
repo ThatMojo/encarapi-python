@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.8.0
+
+- New: `korea.diagnosis(vehicle_id)` (`GET /api/diagnosis/{id}`) returns Encar's own body diagnosis (엔카진단)
+  of an Encar listing: `{"listingId", "vehicleId", "diagnosisDate", "realDiagnosisDate", "items"}`. `items`
+  lists the 8 outer panels (`FRONT_DOOR_LEFT` ... `TRUNK_LID`, `resultCode` `NORMAL` / `REPLACEMENT`) plus
+  `CHECKER_COMMENT` (the inspector's verdict) and `OUTER_PANEL_COMMENT` (Korean free text, `resultCode`
+  `None`); treat unknown names as additional items. About three in four active Encar listings have one.
+  Without one it raises `EnCarAPIError` 404 with a JSON `body`: `diagnosisAvailable: false` (Encar has no
+  diagnosis for the listing), `detailPending: true` (detail not collected yet, retry later) or
+  `Vehicle not found.`; prefixed `kbc:` / `kcar:` ids answer 404 with a hint. All paid plans and trials
+  (counts as a detail lookup), not the free dev plan; removed listings follow the archive rules of
+  `inspection()`.
+- New: `korea.bulk_diagnoses(ids)` (`POST /api/diagnosis/bulk`, Business/Scale; trials 1,000 ids per day): up
+  to 500 ids, same envelope as `bulk_vehicles()` plus `noDiagnosis` (listings without a diagnosis); prefixed
+  ids are listed under `encarOnly`.
+- API release 3 November 2026: Encar payloads of `vehicle()` and `bulk_vehicles()` end with `diagnosisReport`
+  (`{"diagnosisDate", "realDiagnosisDate", "items"}`, `None` = no diagnosis). Not on KB Chachacha / K Car
+  payloads, not translated with `lang`. A new or changed diagnosis does not create an event in `changes()`:
+  fetch it when a listing first appears and re-check with `bulk_diagnoses()` on your own schedule.
+- Typing only: `TypedDict`s `DiagnosisItem`, `DiagnosisReport`, `DiagnosisResponse` and
+  `DiagnosisBulkResponse` (exported from `encarapi`); responses stay plain dicts.
+
 ## 1.7.0
 
 - New: `korea.export_to_file(path, **params)` and `china.export_to_file(path, **params)` stream the full

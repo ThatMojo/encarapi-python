@@ -77,6 +77,57 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual(fake.calls[-1]["params"], {"lang": "de"})
         self.assertEqual(fake.calls[-1]["json"], {"ids": ["1"]})
 
+    def test_diagnosis(self):
+        payload = {
+            "listingId": "41192872", "vehicleId": 41192872,
+            "diagnosisDate": "2026-10-24T00:00:00", "realDiagnosisDate": "2026-10-24T00:00:00",
+            "items": [
+                {"code": "006026", "name": "HOOD", "result": "교환", "resultCode": "REPLACEMENT"},
+                {"code": "006039", "name": "CHECKER_COMMENT", "result": "...", "resultCode": None},
+            ],
+        }
+        client = EnCarAPI("kr_key")
+        fake = patch_session(client.korea._http, [(200, payload)])
+        self.assertEqual(client.korea.diagnosis("41192872"), payload)
+        call = fake.calls[-1]
+        self.assertEqual(call["method"], "GET")
+        self.assertEqual(call["url"], "https://api.encarapi.com/api/diagnosis/41192872")
+        self.assertIsNone(call["json"])
+        client.korea.diagnosis("kbc:123")
+        self.assertTrue(fake.calls[-1]["url"].endswith("/api/diagnosis/kbc%3A123"))
+
+    def test_bulk_diagnoses(self):
+        client = EnCarAPI("kr_key")
+        fake = patch_session(client.korea._http, [(200, {"results": {}, "pending": [], "notFound": [], "noDiagnosis": ["2"], "counts": {}})])
+        res = client.korea.bulk_diagnoses(iter(["1", "2", "kbc:3"]))
+        self.assertEqual(res["noDiagnosis"], ["2"])
+        call = fake.calls[-1]
+        self.assertEqual(call["method"], "POST")
+        self.assertEqual(call["url"], "https://api.encarapi.com/api/diagnosis/bulk")
+        self.assertEqual(call["json"], {"ids": ["1", "2", "kbc:3"]})
+
+    def test_diagnosis_404_carries_body(self):
+        client = EnCarAPI("kr_key")
+        patch_session(client.korea._http, [(404, {"error": "This listing has no Encar diagnosis.", "diagnosisAvailable": False, "listingStatus": "active", "hint": "..."})])
+        with self.assertRaises(EnCarAPIError) as ctx:
+            client.korea.diagnosis("42967176")
+        self.assertEqual(ctx.exception.status, 404)
+        self.assertIs(json.loads(ctx.exception.body)["diagnosisAvailable"], False)
+        patch_session(client.korea._http, [(404, {"error": "Encar diagnosis not yet available.", "detailPending": True, "listingStatus": "active", "hint": "..."})])
+        with self.assertRaises(EnCarAPIError) as ctx:
+            client.korea.diagnosis("43000000")
+        self.assertIs(json.loads(ctx.exception.body)["detailPending"], True)
+
+    def test_diagnosis_types_exported(self):
+        import encarapi
+        for name in ("DiagnosisItem", "DiagnosisReport", "DiagnosisResponse", "DiagnosisBulkResponse"):
+            self.assertIn(name, encarapi.__all__)
+        self.assertIn("listingId", encarapi.DiagnosisResponse.__annotations__)
+        self.assertIn("items", encarapi.DiagnosisResponse.__annotations__)
+        required = getattr(encarapi.DiagnosisBulkResponse, "__required_keys__", None)  # Python 3.9+
+        if required is not None:
+            self.assertEqual(required, frozenset({"results", "pending", "notFound", "noDiagnosis", "counts"}))
+
     def test_china_uses_china_key_and_host(self):
         client = EnCarAPI("kr_key", china_key="cn_key")
         fake = patch_session(client.china._http, [(200, {"total": 0, "results": []})])

@@ -7,13 +7,17 @@ from .client import (
     ChinaCarAPI,
     ChinaCarAPIError,
     ChinaClient,
+    DiagnosisBulkResponse,
+    DiagnosisItem,
+    DiagnosisReport,
+    DiagnosisResponse,
     EnCarAPI,
     EnCarAPIError,
     KoreaClient,
     MissingApiKeyError,
 )
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 __all__ = [
     "EnCarAPI",
     "ChinaCarAPI",
@@ -22,5 +26,9 @@ __all__ = [
     "EnCarAPIError",
     "ChinaCarAPIError",
     "MissingApiKeyError",
+    "DiagnosisItem",
+    "DiagnosisReport",
+    "DiagnosisResponse",
+    "DiagnosisBulkResponse",
     "__version__",
 ]

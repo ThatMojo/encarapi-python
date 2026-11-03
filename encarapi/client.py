@@ -3,7 +3,7 @@ Chinese (Dongchedi, Che168) used car data."""
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Dict, Iterable, Iterator, List, Optional, TypedDict
 from urllib.parse import quote
 
 import requests
@@ -16,6 +16,10 @@ __all__ = [
     "EnCarAPIError",
     "ChinaCarAPIError",
     "MissingApiKeyError",
+    "DiagnosisItem",
+    "DiagnosisReport",
+    "DiagnosisResponse",
+    "DiagnosisBulkResponse",
 ]
 
 KOREA_BASE_URL = "https://api.encarapi.com"
@@ -48,6 +52,61 @@ class MissingApiKeyError(EnCarAPIError):
 
 def _enc(value: str) -> str:
     return quote(str(value), safe="")
+
+
+# -- Encar diagnosis (엔카진단) response shapes (typing only, plain dicts at runtime) -----------
+
+class DiagnosisItem(TypedDict):
+    """One item of an Encar diagnosis: an outer panel or one of the two inspector comments.
+
+    ``name``: ``FRONT_DOOR_LEFT``, ``FRONT_DOOR_RIGHT``, ``BACK_DOOR_LEFT``, ``BACK_DOOR_RIGHT``,
+    ``FRONT_FENDER_LEFT``, ``FRONT_FENDER_RIGHT``, ``HOOD``, ``TRUNK_LID``, ``CHECKER_COMMENT`` or
+    ``OUTER_PANEL_COMMENT`` as Encar names them (treat unknown names as additional items).
+    ``result``: panels the Korean label (정상 normal, 교환 replaced), comments Korean free text.
+    ``resultCode``: panels ``NORMAL`` or ``REPLACEMENT``, comments ``None``."""
+
+    code: Optional[str]
+    name: Optional[str]
+    result: Optional[str]
+    resultCode: Optional[str]
+
+
+class DiagnosisReport(TypedDict):
+    """Encar's own body diagnosis, the ``diagnosisReport`` block of an Encar vehicle detail.
+    ``diagnosisDate`` / ``realDiagnosisDate``: Korean time (KST) without an offset. ``items``: the 8
+    outer panels plus ``CHECKER_COMMENT`` (the inspector's verdict, incl. the frame result) and
+    ``OUTER_PANEL_COMMENT``."""
+
+    diagnosisDate: Optional[str]
+    realDiagnosisDate: Optional[str]
+    items: List[DiagnosisItem]
+
+
+class DiagnosisResponse(DiagnosisReport):
+    """Result of ``korea.diagnosis()``: the diagnosis plus the listing it resolved to."""
+
+    listingId: str
+    vehicleId: int
+
+
+class _DiagnosisBulkBase(TypedDict):
+    results: Dict[str, DiagnosisResponse]
+    pending: List[str]
+    notFound: List[str]
+    noDiagnosis: List[str]
+    counts: Dict[str, int]
+
+
+class DiagnosisBulkResponse(_DiagnosisBulkBase, total=False):
+    """Result of ``korea.bulk_diagnoses()``. ``results``: id (as sent) -> diagnosis; ``pending``:
+    detail not collected yet; ``notFound``: unknown ids; ``noDiagnosis``: listings without an Encar
+    diagnosis; ``counts``: ``requested``, ``found``, ``pending``, ``notFound``, ``noDiagnosis`` (and
+    ``encarOnly`` when present). Optional: ``encarOnly`` / ``encarOnlyHint`` (prefixed kbc:/kcar: ids)
+    and ``archived`` (trials: removed listings beyond the daily archive preview)."""
+
+    encarOnly: List[str]
+    encarOnlyHint: str
+    archived: List[str]
 
 
 class _Http:
@@ -266,7 +325,8 @@ class KoreaClient:
 
     # -- one vehicle ---------------------------------------------------------
     def vehicle(self, vehicle_id: str, **params: Any) -> Any:
-        """Full vehicle detail. Ids: Encar id, ``kbc:<id>`` or ``kcar:<id>``."""
+        """Full vehicle detail. Ids: Encar id, ``kbc:<id>`` or ``kcar:<id>``. Encar payloads end with
+        ``diagnosisReport`` (see ``DiagnosisReport``; ``None`` = Encar has no diagnosis for the car)."""
         return self._get(f"/api/vehicle/{_enc(vehicle_id)}", params)
 
     def inspection(self, vehicle_id: str) -> Any:
@@ -276,6 +336,13 @@ class KoreaClient:
     def record(self, vehicle_id: str) -> Any:
         """Insurance accident & ownership record."""
         return self._get(f"/api/record/{_enc(vehicle_id)}")
+
+    def diagnosis(self, vehicle_id: str) -> DiagnosisResponse:
+        """Encar diagnosis (엔카진단), Encar ids only: the 8 outer panels (``resultCode`` ``NORMAL`` /
+        ``REPLACEMENT``) plus ``CHECKER_COMMENT`` and ``OUTER_PANEL_COMMENT``. Without one it raises
+        ``EnCarAPIError`` with status 404; the JSON ``body`` has ``diagnosisAvailable: false`` (Encar has
+        no diagnosis for the listing) or ``detailPending: true`` (detail not collected yet, retry later)."""
+        return self._get(f"/api/diagnosis/{_enc(vehicle_id)}")
 
     def refresh(self, vehicle_id: str) -> Any:
         """Request a fresh copy of one listing (daily quota per plan)."""
@@ -305,6 +372,11 @@ class KoreaClient:
     def bulk_records(self, ids: Iterable[str]) -> Any:
         """Up to 500 insurance records in one call."""
         return self._post("/api/record/bulk", {"ids": list(ids)})
+
+    def bulk_diagnoses(self, ids: Iterable[str]) -> DiagnosisBulkResponse:
+        """Up to 500 Encar diagnoses in one call (``noDiagnosis`` = listings without one,
+        ``encarOnly`` = kbc:/kcar: ids)."""
+        return self._post("/api/diagnosis/bulk", {"ids": list(ids)})
 
     def changes(self, **params: Any) -> Any:
         """Incremental change feed: ``cursor`` from the previous call, or ``since`` = ``generated_at``
