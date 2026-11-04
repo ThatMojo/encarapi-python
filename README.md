@@ -97,6 +97,31 @@ detail is not collected yet, retry later). `bulk_diagnoses(ids)` takes up to 500
 response shapes are available as `TypedDict`s for type hints: `DiagnosisItem`, `DiagnosisReport`,
 `DiagnosisResponse`, `DiagnosisBulkResponse`.
 
+### Vehicle history
+
+Encar's vehicle history (차량이력, Encar listings only, about 8 in 10 of them): the timeline of inspections,
+repairs, owner changes, insurance claims and recalls, collected from the Ministry of Land, Infrastructure and
+Transport and the Korea Insurance Development Institute. Keys and enums are English; Korean source text stays
+in the `*Ko` fields and is not translated with `lang`.
+
+```python
+hist = client.korea.history("41483842")
+print(hist["summaryKo"], hist["eventCount"], "events")
+
+# Odometer over time (oldest first) - a reading lower than an earlier one is worth a closer look
+mileage = [f'{r["date"]}: {r["mileageKm"]} km' for r in hist["mileageReadings"]]
+
+# All insurance claims on the timeline
+claims = [e for e in hist["events"] if e["type"] == "insurance_claim"]
+```
+
+Without a history, `history()` raises `EnCarAPIError` with status 404; its JSON `body` has
+`historyAvailable: false` (Encar shows no public history for this listing) or `historyPending: true` (Encar
+has one but we have not collected it yet, retry later). Encar ids only (no bulk endpoint); prefixed `kbc:` /
+`kcar:` ids answer 404 with a hint. A new or changed history does not create an event in the change feed. The
+response shape is available as the `VehicleHistory` `TypedDict` (with `HistoryEvent`, `HistoryMileageReading`,
+`HistoryOwnershipPeriod`, `HistoryFlags`).
+
 ## Keep a local copy in sync (Business / Scale)
 
 Three steps: export to a file, start the change feed at the export's timestamp, then keep the cursor.
@@ -167,6 +192,7 @@ save_cursor(client.china.last_cursor)   # later: iterate_changes(cursor=load_cur
 | `inspection(id)` | `GET /api/inspection/{id}` | Official inspection report |
 | `record(id)` | `GET /api/record/{id}` | Accident & ownership record |
 | `diagnosis(id)` | `GET /api/diagnosis/{id}` | Encar diagnosis (엔카진단): outer panels replaced or not, inspector verdict; Encar ids only |
+| `history(id)` | `GET /api/history/{id}` | Encar vehicle history (차량이력): inspections, repairs, owner changes, insurance claims, recalls; Encar ids only |
 | `refresh(id)` | `POST /api/vehicle/{id}/refresh` | On-demand refresh (daily quota) |
 | `price_check(id)` | `GET /api/price-check/{id}` | Market estimate (beta, Scale) |
 | `bulk_vehicles(ids)` / `bulk_inspections(ids)` / `bulk_records(ids)` / `bulk_diagnoses(ids)` | `POST /api/.../bulk` | Up to 500 ids (Business/Scale) |

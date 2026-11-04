@@ -13,11 +13,16 @@ from .client import (
     DiagnosisResponse,
     EnCarAPI,
     EnCarAPIError,
+    HistoryEvent,
+    HistoryFlags,
+    HistoryMileageReading,
+    HistoryOwnershipPeriod,
     KoreaClient,
     MissingApiKeyError,
+    VehicleHistory,
 )
 
-__version__ = "1.8.0"
+__version__ = "1.9.0"
 __all__ = [
     "EnCarAPI",
     "ChinaCarAPI",
@@ -30,5 +35,10 @@ __all__ = [
     "DiagnosisReport",
     "DiagnosisResponse",
     "DiagnosisBulkResponse",
+    "HistoryMileageReading",
+    "HistoryOwnershipPeriod",
+    "HistoryFlags",
+    "HistoryEvent",
+    "VehicleHistory",
     "__version__",
 ]

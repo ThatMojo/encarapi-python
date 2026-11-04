@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.0
+
+- New: `korea.history(vehicle_id)` (`GET /api/history/{id}`) returns Encar's vehicle history (차량이력) of an
+  Encar listing: `{"listingId", "vehicleId", "collectedAt", "listingStatus", "eventCount", "summaryKo",
+  "mileageReadings", "ownershipPeriods", "flags", "events"}`. `events` is the timeline in Encar's order
+  (inspections, repairs, owner changes, insurance claims, recalls, new-car registration and more);
+  `mileageReadings` is every dated odometer reading, oldest first. Encar collects it from the Ministry of Land,
+  Infrastructure and Transport (국토교통부) and the Korea Insurance Development Institute (보험개발원); about 8 in 10
+  Encar listings have one. Keys and enums are English, Korean source text stays in the `*Ko` fields and is not
+  translated with `lang`. Without a history it raises `EnCarAPIError` 404 with a JSON `body`:
+  `historyAvailable: false` (Encar shows no public history for the listing), `historyPending: true` (Encar has
+  one but we have not collected it yet, retry later) or `Vehicle not found.`; prefixed `kbc:` / `kcar:` ids
+  answer 404 with a hint. Encar ids only, no bulk endpoint. A new or changed history does not create an event
+  in `changes()`.
+- Typing only: `TypedDict`s `VehicleHistory`, `HistoryEvent`, `HistoryMileageReading`,
+  `HistoryOwnershipPeriod` and `HistoryFlags` (exported from `encarapi`); responses stay plain dicts.
+
 ## 1.8.0
 
 - New: `korea.diagnosis(vehicle_id)` (`GET /api/diagnosis/{id}`) returns Encar's own body diagnosis (엔카진단)

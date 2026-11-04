@@ -20,6 +20,11 @@ __all__ = [
     "DiagnosisReport",
     "DiagnosisResponse",
     "DiagnosisBulkResponse",
+    "HistoryMileageReading",
+    "HistoryOwnershipPeriod",
+    "HistoryFlags",
+    "HistoryEvent",
+    "VehicleHistory",
 ]
 
 KOREA_BASE_URL = "https://api.encarapi.com"
@@ -107,6 +112,105 @@ class DiagnosisBulkResponse(_DiagnosisBulkBase, total=False):
     encarOnly: List[str]
     encarOnlyHint: str
     archived: List[str]
+
+
+# -- Encar vehicle history (차량이력) response shapes (typing only, plain dicts at runtime) ------
+
+class HistoryMileageReading(TypedDict):
+    """One dated odometer reading of the vehicle history, oldest first. ``source``: ``inspection``,
+    ``repair`` or ``owner_change``."""
+
+    date: Optional[str]
+    mileageKm: int
+    source: str
+
+
+class HistoryOwnershipPeriod(TypedDict):
+    """One ownership period. ``to``: ``None`` = current owner. ``drivenKm``: distance driven in this
+    period (not the odometer reading). ``region`` / ``transferTypeKo``: Korean."""
+
+    from_: Optional[str]
+    to: Optional[str]
+    region: Optional[str]
+    transferTypeKo: Optional[str]
+    drivenKm: Optional[int]
+
+
+class HistoryFlags(TypedDict):
+    """Summary flags of the vehicle history."""
+
+    rental: Optional[bool]
+    commercial: Optional[bool]
+    government: Optional[bool]
+    totalLossFloodOrTheft: Optional[bool]
+    singleOwner: Optional[bool]
+    noOwnDamageInsurance: Optional[bool]
+    recallCount: int
+
+
+class _HistoryEventBase(TypedDict):
+    type: str
+    date: Optional[str]
+    month: Optional[str]
+    titleKo: str
+
+
+class HistoryEvent(_HistoryEventBase, total=False):
+    """One event of the vehicle-history timeline, in Encar's order. Every event has ``type``, ``date``,
+    ``month`` and ``titleKo``; the remaining fields depend on the type (``inspection``, ``repair``,
+    ``owner_change``, ``insurance_claim``, ``recall``, ``new_car``, ``no_own_damage_insurance``,
+    ``registration_change``, ``encar_quote`` or ``other`` - treat unknown types as additional events).
+    Korean source text stays in the ``*Ko`` fields; unmapped titles arrive as ``other`` with Encar's
+    name/value pairs in ``detailsKo``."""
+
+    mileageKm: Optional[int]
+    inspectionType: Optional[str]
+    inspectionTypeKo: Optional[str]
+    station: Optional[str]
+    workshop: Optional[str]
+    workshopAddress: Optional[str]
+    completedDate: Optional[str]
+    partsKo: List[str]
+    transferType: Optional[str]
+    transferTypeKo: Optional[str]
+    claimType: Optional[str]
+    totalCostKrw: Optional[int]
+    partsKrw: Optional[int]
+    laborKrw: Optional[int]
+    paintKrw: Optional[int]
+    unrepaired: Optional[bool]
+    status: Optional[str]
+    statusKo: Optional[str]
+    recallKo: Optional[str]
+    scopeKo: Optional[str]
+    defectKo: Optional[str]
+    ownerType: Optional[str]
+    productionDate: Optional[str]
+    firstRegistrationDate: Optional[str]
+    newPriceKrw: Optional[int]
+    releasePriceKrw: Optional[int]
+    countryKo: Optional[str]
+    region: Optional[str]
+    months: Optional[int]
+    detailsKo: Any
+
+
+class VehicleHistory(TypedDict):
+    """Result of ``korea.history()``: Encar's vehicle history (차량이력) - odometer readings,
+    inspections, repairs, ownership changes, insurance claims and recalls. Encar listings only. Keys and
+    enums are English; Korean source text stays in the ``*Ko`` fields and is not translated with ``lang``.
+    (``mileageReadings`` note: the ``source`` field; ``ownershipPeriods`` use a ``from`` key at runtime.)"""
+
+    listingId: str
+    vehicleId: Optional[int]
+    collectedAt: Optional[str]
+    listingStatus: str
+    eventCount: int
+    summaryKo: Optional[str]
+    mileageReadings: List[HistoryMileageReading]
+    ownershipPeriods: List[HistoryOwnershipPeriod]
+    flags: HistoryFlags
+    events: List[HistoryEvent]
 
 
 class _Http:
@@ -343,6 +447,14 @@ class KoreaClient:
         ``EnCarAPIError`` with status 404; the JSON ``body`` has ``diagnosisAvailable: false`` (Encar has
         no diagnosis for the listing) or ``detailPending: true`` (detail not collected yet, retry later)."""
         return self._get(f"/api/diagnosis/{_enc(vehicle_id)}")
+
+    def history(self, vehicle_id: str) -> VehicleHistory:
+        """Encar vehicle history (차량이력), Encar ids only: the timeline of inspections, repairs, owner
+        changes, insurance claims and recalls, with odometer readings, ownership periods and flags.
+        Without one it raises ``EnCarAPIError`` with status 404; the JSON ``body`` has
+        ``historyAvailable: false`` (Encar shows no public history for the listing) or
+        ``historyPending: true`` (Encar has one but we have not collected it yet, retry later)."""
+        return self._get(f"/api/history/{_enc(vehicle_id)}")
 
     def refresh(self, vehicle_id: str) -> Any:
         """Request a fresh copy of one listing (daily quota per plan)."""

@@ -128,6 +128,47 @@ class OfflineTests(unittest.TestCase):
         if required is not None:
             self.assertEqual(required, frozenset({"results", "pending", "notFound", "noDiagnosis", "counts"}))
 
+    def test_history(self):
+        payload = {
+            "listingId": "41483842", "vehicleId": 41485538, "collectedAt": "2026-11-04T10:00:00.000Z",
+            "listingStatus": "active", "eventCount": 2, "summaryKo": "용도 변경 이력이 없는 차량이네요!",
+            "mileageReadings": [{"date": "2025-11-03", "mileageKm": 89119, "source": "inspection"}],
+            "ownershipPeriods": [{"from": "2023-08", "to": None, "region": "경기도 양주시", "transferTypeKo": "매매업자 거래이전", "drivenKm": 69482}],
+            "flags": {"rental": False, "commercial": False, "government": False, "totalLossFloodOrTheft": False, "singleOwner": True, "noOwnDamageInsurance": False, "recallCount": 0},
+            "events": [
+                {"type": "inspection", "date": "2025-11-03", "month": "2025-11", "titleKo": "자동차 검사 완료", "mileageKm": 89119, "inspectionType": "periodic"},
+                {"type": "insurance_claim", "date": "2024-05", "month": "2024-05", "titleKo": "보험 수리", "claimType": "own_damage", "totalCostKrw": 1250000},
+            ],
+        }
+        client = EnCarAPI("kr_key")
+        fake = patch_session(client.korea._http, [(200, payload)])
+        self.assertEqual(client.korea.history("41483842"), payload)
+        call = fake.calls[-1]
+        self.assertEqual(call["method"], "GET")
+        self.assertEqual(call["url"], "https://api.encarapi.com/api/history/41483842")
+        self.assertIsNone(call["json"])
+        client.korea.history("kbc:123")
+        self.assertTrue(fake.calls[-1]["url"].endswith("/api/history/kbc%3A123"))
+
+    def test_history_404_carries_body(self):
+        client = EnCarAPI("kr_key")
+        patch_session(client.korea._http, [(404, {"error": "This listing has no public vehicle history.", "historyAvailable": False, "listingStatus": "active", "hint": "..."})])
+        with self.assertRaises(EnCarAPIError) as ctx:
+            client.korea.history("42967176")
+        self.assertEqual(ctx.exception.status, 404)
+        self.assertIs(json.loads(ctx.exception.body)["historyAvailable"], False)
+        patch_session(client.korea._http, [(404, {"error": "Vehicle history not yet available.", "historyPending": True, "listingStatus": "active", "hint": "..."})])
+        with self.assertRaises(EnCarAPIError) as ctx:
+            client.korea.history("43000000")
+        self.assertIs(json.loads(ctx.exception.body)["historyPending"], True)
+
+    def test_history_types_exported(self):
+        import encarapi
+        for name in ("HistoryMileageReading", "HistoryOwnershipPeriod", "HistoryFlags", "HistoryEvent", "VehicleHistory"):
+            self.assertIn(name, encarapi.__all__)
+        self.assertIn("events", encarapi.VehicleHistory.__annotations__)
+        self.assertIn("mileageReadings", encarapi.VehicleHistory.__annotations__)
+
     def test_china_uses_china_key_and_host(self):
         client = EnCarAPI("kr_key", china_key="cn_key")
         fake = patch_session(client.china._http, [(200, {"total": 0, "results": []})])
