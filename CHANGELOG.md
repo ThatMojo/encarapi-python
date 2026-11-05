@@ -2,6 +2,8 @@
 
 ## 1.9.1
 
+- Release note: 1.9.0 was not published to PyPI on its own - 1.9.1 is the first published version with
+  `korea.history()` and everything listed under 1.9.0 below.
 - `korea.inspection(vehicle_id)` and `korea.bulk_inspections(ids)` also take KB Chachacha ids (`"kbc:<id>"`,
   API release 5 November 2026): the official inspection sheet (성능·상태점검기록부) read from the inspection
   company's website, in the same structure and with the same codes as an Encar report, plus a `source` block
