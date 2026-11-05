@@ -434,7 +434,13 @@ class KoreaClient:
         return self._get(f"/api/vehicle/{_enc(vehicle_id)}", params)
 
     def inspection(self, vehicle_id: str) -> Any:
-        """Official inspection report."""
+        """Official inspection report. Ids: Encar id, or ``kbc:<id>`` for a KB Chachacha listing whose sheet
+        we read (``InspectionAvailable`` true): same structure and codes as an Encar report plus a ``source``
+        block (``id``, ``provider``, ``reportUrl``, ``sheetUrl``, ``fetchedAt``), ``vehicleId`` None,
+        ``images[].path`` absolute URLs. Otherwise a ``kbc:`` id raises ``EnCarAPIError`` 404; the JSON
+        ``body`` has ``detailPending: true`` (sheet link not read yet, retry later) or
+        ``inspectionAvailable: false`` (no structured sheet, original link in ``inspectionReportUrl``).
+        ``kcar:`` ids answer 404 with a hint."""
         return self._get(f"/api/inspection/{_enc(vehicle_id)}")
 
     def record(self, vehicle_id: str) -> Any:
@@ -478,7 +484,9 @@ class KoreaClient:
         return self._http.request("POST", "/api/vehicle/bulk", params, json={"ids": list(ids)})
 
     def bulk_inspections(self, ids: Iterable[str]) -> Any:
-        """Up to 500 inspection reports in one call."""
+        """Up to 500 inspection reports in one call. ``kbc:`` ids come back in ``results`` (payload as
+        ``inspection()``), ``pending`` (sheet link not read yet), ``noInspection`` (no structured sheet) or
+        ``notEntitled``; ``kcar:`` ids under ``encarOnly``."""
         return self._post("/api/inspection/bulk", {"ids": list(ids)})
 
     def bulk_records(self, ids: Iterable[str]) -> Any:

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.1
+
+- `korea.inspection(vehicle_id)` and `korea.bulk_inspections(ids)` also take KB Chachacha ids (`"kbc:<id>"`,
+  API release 5 November 2026): the official inspection sheet (성능·상태점검기록부) read from the inspection
+  company's website, in the same structure and with the same codes as an Encar report, plus a `source` block
+  (`id`, `provider`, `reportUrl`, `sheetUrl`, `fetchedAt`); `vehicleId` is `None`, `images[].path` are absolute
+  URLs. About two in five KB Chachacha listings that link a sheet have one; `InspectionAvailable` on the
+  `kbc:` vehicle detail, on KB Chachacha items of `changes()` and the `inspection_available` export column tell
+  which. Without one it raises `EnCarAPIError` 404: `detailPending: true` (sheet link not read yet, usually
+  within an hour) or `inspectionAvailable: false` (no structured sheet, original link in `inspectionReportUrl`).
+  In `bulk_inspections()` such ids are listed under `pending` / `noInspection`. No code change, the calls
+  already passed the id through.
+
 ## 1.9.0
 
 - New: `korea.history(vehicle_id)` (`GET /api/history/{id}`) returns Encar's vehicle history (차량이력) of an
