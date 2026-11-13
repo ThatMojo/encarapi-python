@@ -599,6 +599,12 @@ class ChinaClient:
         for the equipment names."""
         return self._http.request("GET", f"/api/specs/{_enc(str(trim_id))}", params)
 
+    def spec_fields(self, **params: Any) -> Any:
+        """Field dictionary of the ``specs`` object of a vehicle record: ``label``, ``unit``,
+        ``group`` and ``type`` per key (keys under ``specs.ev`` as ``ev.<name>``). ``lang="ru"`` or
+        ``"zh"`` for Russian or Chinese labels, default English. Static, cache it."""
+        return self._http.request("GET", "/api/specs/fields", params)
+
     def bulk_vehicles(self, ids: Iterable[str], **params: Any) -> Any:
         """Up to 500 full records in one call (Business/Scale). ``lang="zh"`` or ``"ru"`` as on ``catalog()``."""
         return self._http.request("POST", "/api/vehicle/bulk", params, json={"ids": list(ids)})

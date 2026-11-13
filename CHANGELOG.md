@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.2
+
+- `china.spec_fields(lang=...)` (new, API release November 2026): the field dictionary of the `specs` object of
+  a vehicle record, `GET /api/specs/fields`. One entry per key with `label`, `unit`, `group` and `type`, in
+  English, Russian (`lang="ru"`) or Chinese (`lang="zh"`); keys under `specs.ev` are written `ev.<name>`.
+  Label a specification sheet by going through `fields` and reading `specs[key]`.
+- China `lang="ru"`: the text values of `specs` (energy type, transmission, drive, aspiration, body type,
+  emission standard, warranties, motor and battery type) are now Russian on `vehicle`, `vehicle_by_url`,
+  `bulk_vehicles` and in the `summary` of `specs(trim_id)`. A value without a Russian term stays English.
+- Dongchedi records: `specs.ev.motorLayout`, `specs.ev.motorType`, `specs.ev.batteryWarranty` and the less common
+  `specs.warranty` wordings now come in the same English as on Che168 records (they were transliterated before,
+  e.g. "Front Zhi" is now "Front-mounted"). No SDK change needed.
+
 ## 1.9.1
 
 - Release note: 1.9.0 was not published to PyPI on its own - 1.9.1 is the first published version with
