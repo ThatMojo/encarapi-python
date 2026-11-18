@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.0
+
+- China: new source `che168_domestic` (API release 18 November 2026). Che168 cars that are only on the domestic site che168.com (not in its export portal) are a separate source, `che168_domestic`: returned by the catalog and the change feed only with `source="che168_domestic"`, found by id, link and bulk lookups without it. Their price is the dealer's CNY price as listed (no `exportOffer`).
+  `china.catalog(source="che168_domestic")`, `china.changes(source="che168_domestic", ...)`. No code change needed,
+  the parameters are passed through; default results are unchanged.
+
 ## 1.9.1
 
 - Release note: 1.9.0 was not published to PyPI on its own - 1.9.1 is the first published version with

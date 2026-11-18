@@ -558,7 +558,8 @@ class ChinaClient:
         self.last_cursor: Optional[int] = None
 
     def catalog(self, **params: Any) -> Any:
-        """Search listings. Filters: source, make, model, year_min/max, price_min/max (CNY),
+        """Search listings. Filters: source (``dongchedi``, ``che168``; ``che168_domestic`` = Che168 cars only on
+        the domestic site, returned only when named), make, model, year_min/max, price_min/max (CNY),
         mileage_max, power_min/max (hp), city, fuel, has_report, export_ready, sort, page, limit,
         lang (``"zh"`` = original Chinese values, ``"ru"`` = Russian values for the fixed fields
         (fuel, transmission, drivetrain, colours, seller type, condition, vehicle class), city names

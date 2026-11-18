@@ -206,7 +206,7 @@ save_cursor(client.china.last_cursor)   # later: iterate_changes(cursor=load_cur
 
 | Method | Endpoint | Notes |
 |---|---|---|
-| `catalog(**params)` | `GET /api/catalog` | `make`, `price_min/max` (CNY), `power_min/max` (hp), `export_ready`, `sort`, `lang` (`zh`, `ru`), ... |
+| `catalog(**params)` | `GET /api/catalog` | `source` (`dongchedi`, `che168`, on request `che168_domestic` = Che168 cars only on the domestic site), `make`, `price_min/max` (CNY), `power_min/max` (hp), `export_ready`, `sort`, `lang` (`zh`, `ru`), ... |
 | `iterate_catalog(**params)` | `GET /api/catalog` | Generator over all pages (up to the 10,000-result depth limit) |
 | `vehicle(id)` | `GET /api/vehicle/{id}` | Price history, photos, seller, export status |
 | `vehicle_by_url(url)` | `GET /api/vehicle/by-url` | Same record by Che168/Dongchedi listing link (desktop, mobile or app) |
