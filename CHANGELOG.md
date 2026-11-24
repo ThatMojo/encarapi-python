@@ -9,6 +9,10 @@
 - China `lang="ru"`: the text values of `specs` (energy type, transmission, drive, aspiration, body type,
   emission standard, warranties, motor and battery type) are now Russian on `vehicle`, `vehicle_by_url`,
   `bulk_vehicles` and in the `summary` of `specs(trim_id)`. A value without a Russian term stays English.
+  The record fields `emissionStandard` and `warranty` follow `lang="ru"` as well.
+- Dongchedi English: some vehicle class and body type values were transliterated and now read as English. These
+  values also appear in the record field `vehicleClass` and the CSV column `vehicle_class`, for example
+  "Zhong Pickup" becomes "Pickup Truck", "Fangche" becomes "Motorhome" and "Weika" becomes "Truck".
 - Dongchedi records: `specs.ev.motorLayout`, `specs.ev.motorType`, `specs.ev.batteryWarranty` and the less common
   `specs.warranty` wordings now come in the same English as on Che168 records (they were transliterated before,
   e.g. "Front Zhi" is now "Front-mounted"). No SDK change needed.
