@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- China inspection reports are archived (API 1.12.0): `china.inspection(id)` keeps returning a report after the
+  marketplace removed it or the car was sold. The report has two new fields, `firstSeenAt` (when we first stored
+  this content; for reports stored before 25 Nov 2026 the date of their last read; `None` if not archived yet) and
+  `lastSeenAt` (when we last read it on the marketplace; reports are re-read every 7 to 30 days).
+- China `inspectionAvailable` (catalog, `vehicle`, `bulk_vehicles`) is now also `True` for archived reports the
+  marketplace no longer shows.
+- `che168_domestic` cars now get their inspection report too where the car has one.
+- None of this needs an SDK code change; the docstring of `china.inspection()` names the two new fields.
+
 ## 1.11.0
 
 - `china.spec_fields(lang=...)` (new, API release November 2026): the field dictionary of the `specs` object of

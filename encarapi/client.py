@@ -591,7 +591,12 @@ class ChinaClient:
         return self._http.request("GET", "/api/vehicle/by-url", {**params, "url": url})
 
     def inspection(self, vehicle_id: str, **params: Any) -> Any:
-        """Inspection report: accident, flood and fire checks, battery data for EVs."""
+        """Inspection report: accident, flood and fire checks, battery data for EVs. Reports are
+        archived: a report stays available after the marketplace removes it or the car is sold.
+        ``firstSeenAt``: when we first stored this content (for reports stored before 25 Nov 2026 the
+        date of their last read; ``None`` if not archived yet). ``lastSeenAt``: when we last read it
+        on the marketplace (re-read every 7 to 30 days). ``inspectionAvailable`` on catalog, vehicle
+        and bulk records is ``True`` for archived reports as well."""
         return self._http.request("GET", f"/api/inspection/{_enc(vehicle_id)}", params)
 
     def specs(self, trim_id: Any, **params: Any) -> Any:
