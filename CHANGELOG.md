@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.11.1
 
 - China inspection reports are archived (API 1.12.0): `china.inspection(id)` keeps returning a report after the
   marketplace removed it or the car was sold. The report has two new fields, `firstSeenAt` (when we first stored
